@@ -1,21 +1,12 @@
 import streamlit as st
 import streamlit_antd_components as sac
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime
 import os
-import random
 
 from auth import check_password
 import database
 import reports
-
-# Constants for Categories and Subtopics
-CATEGORIES = {
-    "Reading": ["Letter sounds", "Blending", "Sight words", "Fluency", "Comprehension"],
-    "Writing": ["Letter formation", "Spelling", "Sentence writing", "Dictation", "Handwriting"],
-    "Speaking": ["Pronunciation", "Vocabulary", "Conversation", "Confidence", "Storytelling"],
-    "Listening": ["Following instructions", "Sound recognition", "Listening comprehension", "Attention", "Response"]
-}
 
 # --- Page Config ---
 st.set_page_config(
@@ -47,15 +38,8 @@ with st.sidebar:
     menu = sac.menu([
         sac.MenuItem('Dashboard', icon='house-fill'),
         sac.MenuItem('Daily Entry', icon='pencil-square'),
-        sac.MenuItem('Weekly Reports', icon='calendar-week'),
-        sac.MenuItem('Monthly Analytics', icon='graph-up'),
         sac.MenuItem('Settings', icon='gear-fill'),
     ], size='md', variant='filled', color='indigo')
-    
-    st.divider()
-    
-    # Demo Mode Toggle
-    demo_mode = st.toggle('🧪 Preview Mode (Demo Data)')
     
     st.divider()
     
@@ -67,31 +51,10 @@ with st.sidebar:
         use_container_width=True
     )
 
-# --- Demo Data Generator ---
-def generate_demo_logs(student_id, days=30):
-    demo_logs = []
-    end_date = datetime.today().date()
-    start_date = end_date - timedelta(days=days)
-    current = start_date
-    while current <= end_date:
-        for cat, subtopics in CATEGORIES.items():
-            for sub in subtopics:
-                demo_logs.append({
-                    "Date": current,
-                    "ID": student_id,
-                    "Category": cat,
-                    "Subtopic": sub,
-                    "Level": random.randint(1, 32),
-                    "Score": random.randint(6, 10),
-                    "Note": "Demo note"
-                })
-        current += timedelta(days=1)
-    return pd.DataFrame(demo_logs)
-
 # --- View Routing ---
 
 if menu == 'Dashboard':
-    st.title("Good Morning, Teacher! ☀️")
+    st.title("Good Morning, Parvin Banu! ☀️")
     st.markdown("Manage your dynamic student roster here.")
     
     # Dashboard Metrics
@@ -135,182 +98,93 @@ if menu == 'Dashboard':
                         st.rerun()
 
 elif menu == 'Daily Entry':
-    st.title("📝 The Teacher's Desk")
-    st.markdown("Quickly enter daily scores and update levels using this smart grid matrix.")
+    st.title("📝 Daily Tracker & Portfolio")
+    st.markdown("Select a student, upload their work, and generate a report.")
     
     if roster_df.empty:
         st.warning("Please add students in the Dashboard first.")
     else:
-        col1, col2 = st.columns(2)
-        with col1:
-            entry_date = st.date_input("Date", datetime.today())
-        with col2:
-            selected_cat = st.selectbox("Select Category", list(CATEGORIES.keys()))
+        student_names = roster_df['Name'].tolist()
+        
+        with st.form("daily_entry_form"):
+            col1, col2 = st.columns(2)
+            with col1:
+                entry_date = st.date_input("Date", datetime.today())
+                selected_student = st.selectbox("Student", student_names)
+                selected_cat = st.selectbox("Category", ["Reading", "Writing", "Speaking", "Listening"])
+            with col2:
+                set_num = st.number_input("Set (1-32)", min_value=1, max_value=32, step=1)
+                
+            st.divider()
+            st.markdown("### 📸 Uploads")
+            col_img, col_pdf = st.columns(2)
+            with col_img:
+                photo_file = st.file_uploader("Upload Student Work (Image)", type=["jpg", "jpeg", "png"])
+            with col_pdf:
+                pdf_file = st.file_uploader("Upload Worksheet (PDF)", type=["pdf"])
+                
+            st.divider()
+            remarks = st.text_area("Teacher's Remarks", height=150)
             
-        st.markdown(f"### 📊 Enter Scores for {selected_cat} (1-10)")
-        
-        # Prepare wide data editor frame
-        wide_data = []
-        for index, student in roster_df.iterrows():
-            row_data = {
-                "Student": student['Name'],
-                "Level (1-32)": 1 # Default, ideally fetched from last entry
-            }
-            # Add subtopics
-            for sub in CATEGORIES[selected_cat]:
-                row_data[sub] = None
-            row_data["Note"] = ""
-            wide_data.append(row_data)
+            submitted = st.form_submit_button("Save Entry & Generate Report", type="primary")
             
-        editor_df = pd.DataFrame(wide_data)
-        
-        # Config columns
-        col_config = {
-            "Student": st.column_config.TextColumn("Student Name", disabled=True),
-            "Level (1-32)": st.column_config.NumberColumn("Level (1-32)", min_value=1, max_value=32, step=1),
-            "Note": st.column_config.TextColumn("General Note", width="large")
-        }
-        for sub in CATEGORIES[selected_cat]:
-            col_config[sub] = st.column_config.NumberColumn(sub, min_value=1, max_value=10, step=1)
-            
-        edited_df = st.data_editor(
-            editor_df,
-            column_config=col_config,
-            hide_index=True,
-            use_container_width=True
-        )
-        
-        if st.button("Sync to Local Database", type="primary"):
-            with st.status("Melting matrix and syncing to database...", expanded=True) as status:
-                name_to_id = dict(zip(roster_df['Name'], roster_df['ID']))
+            if submitted:
+                os.makedirs("uploads", exist_ok=True)
                 
-                new_logs = []
-                for index, row in edited_df.iterrows():
-                    s_id = name_to_id.get(row['Student'])
-                    if s_id:
-                        for sub in CATEGORIES[selected_cat]:
-                            score = row[sub]
-                            if pd.notnull(score):
-                                new_logs.append({
-                                    "Date": entry_date,
-                                    "ID": s_id,
-                                    "Category": selected_cat,
-                                    "Subtopic": sub,
-                                    "Level": int(row['Level (1-32)']),
-                                    "Score": int(score),
-                                    "Note": row['Note']
-                                })
-                
-                if new_logs:
-                    new_logs_df = pd.DataFrame(new_logs)
-                    database.save_logs(new_logs_df)
-                    status.update(label="Sync complete!", state="complete", expanded=False)
-                    st.success(f"Successfully synced {len(new_logs)} entries for {entry_date}.")
-                else:
-                    status.update(label="No valid scores entered.", state="error", expanded=False)
-                    st.warning("Please enter at least one score before syncing.")
-
-elif menu == 'Weekly Reports':
-    st.title("📅 Weekly Reporting")
-    st.markdown("Generate Glows, Grows, and comprehensive PDFs for the past 7 days.")
-    
-    if roster_df.empty:
-        st.warning("Please add students in the Dashboard first.")
-    else:
-        end_date = datetime.today().date()
-        start_date = end_date - timedelta(days=7)
-        
-        st.info(f"Reporting Period: **{start_date} to {end_date}**")
-        
-        remarks_dict = {}
-        
-        tabs = st.tabs(roster_df['Name'].tolist())
-        
-        for idx, (student_idx, student) in enumerate(roster_df.iterrows()):
-            with tabs[idx]:
-                s_id = student['ID']
-                s_name = student['Name']
-                
-                if demo_mode:
-                    df_s = generate_demo_logs(s_id, days=7)
-                else:
-                    df_s = logs_df[(logs_df['ID'] == s_id) & (logs_df['Date'] >= start_date) & (logs_df['Date'] <= end_date)]
-                
-                if df_s.empty:
-                    st.write("No entries this week.")
-                    remarks_dict[s_id] = "No entries recorded for this period."
-                else:
-                    avg_score = df_s['Score'].mean()
-                    st.metric("Weekly Average Score", f"{avg_score:.1f}/10")
-                    
-                    if avg_score >= 8:
-                        default_remark = "Mastery demonstrated! Great focus and excellent performance this week. Keep up the momentum!"
-                    elif avg_score < 5:
-                        default_remark = "Needs Focus. We will work on solidifying foundational concepts next week."
-                    else:
-                        default_remark = "Steady progress. Consistent effort shown this week."
+                photo_path = None
+                if photo_file:
+                    photo_path = os.path.join("uploads", f"img_{datetime.now().strftime('%Y%m%d%H%M%S')}_{photo_file.name}")
+                    with open(photo_path, "wb") as f:
+                        f.write(photo_file.getbuffer())
                         
-                    remarks = st.text_area(f"Glows and Grows for {s_name}", value=default_remark, key=f"remark_{s_id}")
-                    remarks_dict[s_id] = remarks
-                    
-                    st.markdown("<br>", unsafe_allow_html=True)
-                    if st.button(f"Generate {s_name}'s PDF Report", key=f"gen_{s_id}"):
-                        with st.spinner("Generating PDF..."):
-                            pdf_bytes = reports.generate_student_pdf(s_name, df_s, remarks, start_date, end_date)
-                        st.download_button(
-                            label=f"Download {s_name}_Report.pdf",
-                            data=pdf_bytes,
-                            file_name=f"{s_name.replace(' ', '_')}_Report.pdf",
-                            mime="application/pdf",
-                            type="primary",
-                            key=f"dl_btn_{s_id}"
-                        )
-                    
-        st.divider()
-        if st.button("Generate & Zip All Reports", type="primary"):
-            with st.spinner("Generating beautiful PDFs..."):
-                logs_to_pass = logs_df
-                if demo_mode:
-                    demo_list = []
-                    for s in roster_df['ID']:
-                        demo_list.append(generate_demo_logs(s, days=7))
-                    if demo_list:
-                        logs_to_pass = pd.concat(demo_list, ignore_index=True)
-
-                zip_data = reports.generate_zip_reports(roster_df, logs_to_pass, remarks_dict, start_date, end_date)
+                pdf_path = None
+                if pdf_file:
+                    pdf_path = os.path.join("uploads", f"pdf_{datetime.now().strftime('%Y%m%d%H%M%S')}_{pdf_file.name}")
+                    with open(pdf_path, "wb") as f:
+                        f.write(pdf_file.getbuffer())
+                        
+                s_id = roster_df[roster_df['Name'] == selected_student].iloc[0]['ID']
                 
-            st.success("Reports generated successfully!")
+                new_log = pd.DataFrame([{
+                    "Date": entry_date,
+                    "ID": s_id,
+                    "Category": selected_cat,
+                    "Set": set_num,
+                    "PhotoPath": photo_path if photo_path else "",
+                    "PDFPath": pdf_path if pdf_path else "",
+                    "Remarks": remarks
+                }])
+                database.save_logs(new_log)
+                st.success("Entry saved successfully to the database!")
+                
+                # Generate PDF
+                with st.spinner("Merging PDF Report..."):
+                    try:
+                        pdf_bytes = reports.generate_daily_report_pdf(
+                            student_name=selected_student,
+                            date=entry_date.strftime("%Y-%m-%d"),
+                            category=selected_cat,
+                            set_num=set_num,
+                            remarks=remarks,
+                            photo_path=photo_path,
+                            pdf_path=pdf_path
+                        )
+                        st.session_state['last_pdf'] = pdf_bytes
+                        st.session_state['last_pdf_name'] = f"{selected_student.replace(' ', '_')}_{entry_date}_Report.pdf"
+                    except Exception as e:
+                        st.error(f"Error generating PDF: {str(e)}")
+
+        if 'last_pdf' in st.session_state:
+            st.markdown("### 🎉 Report Ready!")
             st.download_button(
-                label="Download ZIP Archive",
-                data=zip_data,
-                file_name=f"TutorPro_Reports_{start_date}_to_{end_date}.zip",
-                mime="application/zip",
-                type="primary"
+                label="📥 Download Generated PDF Report",
+                data=st.session_state['last_pdf'],
+                file_name=st.session_state['last_pdf_name'],
+                mime="application/pdf",
+                type="primary",
+                use_container_width=True
             )
 
-elif menu == 'Monthly Analytics':
-    st.title("📈 Monthly Analytics")
-    st.markdown("Analyze growth trends and skill balances over a 4-week period.")
-    
-    if roster_df.empty:
-        st.warning("Please add students in the Dashboard first.")
-    else:
-        student_name = st.selectbox("Select Student", roster_df['Name'].tolist())
-        student_id = roster_df[roster_df['Name'] == student_name].iloc[0]['ID']
-        
-        end_date = datetime.today().date()
-        start_date = end_date - timedelta(days=28)
-        
-        if demo_mode:
-            df_s = generate_demo_logs(student_id, days=28)
-        else:
-            df_s = logs_df[(logs_df['ID'] == student_id) & (logs_df['Date'] >= start_date) & (logs_df['Date'] <= end_date)]
-        
-        if df_s.empty:
-            st.warning(f"No data found for {student_name} in the last 28 days. Turn on Demo Mode to preview.")
-        else:
-            st.plotly_chart(reports.generate_subtopic_chart(df_s, student_name, return_fig=True), use_container_width=True)
-            
 elif menu == 'Settings':
     st.title("⚙️ Settings")
     st.markdown("Manage your application settings and raw database.")
