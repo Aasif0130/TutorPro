@@ -65,7 +65,7 @@ def generate_daily_report_pdf(student_name, date, category, set_num, remarks, ph
             pdf.cell(0, 10, f"Error loading image: {str(e)}", 0, 1)
     
     # Save cover page to temp buffer
-    cover_pdf_bytes = pdf.output(dest='S').encode('latin1')
+    cover_pdf_bytes = bytes(pdf.output())
     
     # 2. Merge with Worksheet PDF if it exists
     merger = PdfWriter()
