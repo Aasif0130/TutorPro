@@ -1,0 +1,93 @@
+/* Premium Glassmorphism CSS for TutorPro Daily */
+
+/* Hide default Streamlit elements */
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+
+/* Base styling */
+body {
+    background-color: #f1f5f9;
+    font-family: 'Inter', sans-serif;
+    color: #1e293b;
+}
+
+/* Glassmorphism Cards */
+.stCard {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.6));
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    padding: 24px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05), inset 0 2px 0 rgba(255, 255, 255, 1);
+    margin-bottom: 24px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stCard:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 20px 30px rgba(99, 102, 241, 0.15), inset 0 2px 0 rgba(255, 255, 255, 1);
+    border-color: rgba(99, 102, 241, 0.3);
+}
+
+.metric-value {
+    font-size: 2.5rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-top: 8px;
+}
+
+.metric-label {
+    font-size: 0.9rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 700;
+}
+
+/* Fancy Headers */
+h1, h2, h3 {
+    color: #0f172a;
+    font-weight: 800;
+}
+
+h1 {
+    background: linear-gradient(135deg, #4f46e5, #ec4899);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 1.5rem;
+    font-size: 3rem;
+}
+
+/* Data Editor enhancements */
+[data-testid="stDataFrame"] {
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.04);
+    border: 1px solid #e2e8f0;
+    transition: all 0.3s ease;
+}
+
+[data-testid="stDataFrame"]:hover {
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.08);
+}
+
+/* Buttons */
+.stButton > button {
+    border-radius: 12px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.stButton > button[kind="primary"] {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border: none;
+    box-shadow: 0 4px 6px rgba(99, 102, 241, 0.25);
+}
+
+.stButton > button[kind="primary"]:hover {
+    box-shadow: 0 6px 12px rgba(99, 102, 241, 0.4);
+    transform: translateY(-2px);
+}

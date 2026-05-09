@@ -1,0 +1,22 @@
+[project]
+name = "tutorpro"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Your Name",email = "you@example.com"}
+]
+requires-python = ">=3.14"
+dependencies = [
+    "streamlit (>=1.57.0,<2.0.0)",
+    "streamlit-antd-components (>=0.3.2,<0.4.0)",
+    "streamlit-extras (>=1.5.0,<2.0.0)",
+    "fpdf2 (>=2.8.7,<3.0.0)",
+    "plotly (>=6.7.0,<7.0.0)",
+    "pandas (>=3.0.2,<4.0.0)",
+    "openpyxl (>=3.1.5,<4.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

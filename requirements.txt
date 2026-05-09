@@ -1,0 +1,7 @@
+streamlit
+streamlit-antd-components
+streamlit-extras
+fpdf2
+plotly
+pandas
+openpyxl
